@@ -1,5 +1,4 @@
 %Simple Pin-Roller BeamSolver
-
 %Test values for forces Delete later*********** and get input
 F1 = -18;
 F2 = -82;
@@ -36,7 +35,7 @@ Ry = x(3);
 
 %Shear Val Solver
 X = linspace(0,L,1000);
-shearval = zeros(1,length(X));
+shear_val = zeros(1,length(X));
 
 for i = 1:length(X)
     value = 0;
@@ -55,27 +54,67 @@ for i = 1:length(X)
                 end
             end
      end
-    shearval(i) = value;
+    shear_val(i) = value;
 end
 
+%Moments Calculations
+dX = X(2) - X(1); %To get step size
+
+%shear_val is already an arr of shear values at every X of the beam, Moment is the area under shear value V distance graph
+%since shear_val and X are evenly spaced and X is just hold the distance
+%information for shear_val multiplying every shear_val by the change in X
+%which would be the same at any 2 points, would give me the moment at every
+%X on the beam, cumsum simply creates an array cumulatively summing
+%everything to the left
+
+moment_val = cumsum(shear_val .* dX); 
+%Initially didint make sense becuase i havent taken solid mechanics,
+%but basically this is the moment at every point on the beam, since the
+%beam is in EQ it should go from 0 to 0, and the highest moment tells you
+%where the beam is most likely to fail 
+%Highest moment = Highest Bending stress = Most likely fail location
+%sigma = Mc/I;M is your bending moment, c is the distance from the neutral axis, and I is the moment of inertia of the cross section
+
+moment_val(end) = 0; %this is to force small numerical error from cumsum i think?, moment at right end should be 0 since beam is in equilibrium
+
+%fyi in statics we find moment at point A due to all forces, used to find unknowns
+%this moment is the internal moment at every cross section, used to find where the beam might fail
+
 try
-pos = input('Enter position to calculate Shear Value: ');
-if ((pos > L) || (pos < L)), error('Impossible Position Entered!\n');end
+pos = input('Enter position to generate values from: ');
+if ((pos > L)), error('Position Entered Cannot Be Greater than Beam Length!');end
+if ((pos < 0)), error('Position Entered Cannot Be Negative!');end
 idx = max(1,min(1000,round((pos/L)*1000))); %Force index to be between 1 : 1000; if pos = 0 idx = 1, if pos = 1000 idx = 1000; Round is for inputs like (1/3) = 33.3
-fprintf("Shear Value at %.2fm = %.2fN\n", pos,shearval(idx))
+fprintf("Shear Value at %.2fm = %.2fN\n", pos,shear_val(idx))
+fprintf("Moment at %.2fm = %.2fNm\n", pos,moment_val(idx))
 catch ME
     disp(ME.message)
 end
 
+
+%Plots
 f = figure;
 f.Name = 'Beam Solver';
 f.NumberTitle = 'Off';
-plot(X,shearval,'-r','LineWidth',3)
+
+%Plot 1 (Shear)
+subplot(2,1,1)
+plot(X,shear_val,'-r','LineWidth',3)
 
 title('Shear Value vs Length')
 xlabel('Length(m)')
 ylabel('Shear Value(N)')
 grid on
 yline(0,'--','y=0', 'LineWidth',2);
+set(gca,'FontSize',12,'FontName', 'Helvetica')
 
-set(gca,'FontSize',15,'FontName', 'Helvetica')
+%Plot 2 (Moment)
+subplot(2,1,2)
+plot(X,moment_val,'--b','LineWidth',3)
+
+title('Moment vs Length')
+xlabel('Length(m)')
+ylabel('Moment(Nm)')
+grid on
+yline(0,'--','y=0', 'LineWidth',2);
+set(gca,'FontSize',12,'FontName', 'Helvetica')
