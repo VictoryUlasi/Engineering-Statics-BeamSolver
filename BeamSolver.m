@@ -1,24 +1,28 @@
 %Simple Pin-Roller BeamSolver
-%Test values for forces Delete later*********** and get input
-F1 = -18;
-F2 = -82;
-F3 = -150;
-x1 = 1;
-x2 = 2;
-x3 = 8;
 
 % Beam
-L = 10;                         % length
+L = input('Enter Beam Length: ');                         % length
 
 % Loads
-force_mag = [F1, F2, F3];      % magnitudes
-force_pos = [x1, x2, x3];      % positions along beam
+try
+    str = input("Enter Force values: ",'s');
+    force_mag = sscanf(str,'%f');   % magnitudes
+    str = input("Enter lever arm distance for Forces: ",'s');
+    force_pos = sscanf(str, '%f');  % positions along beam 
+
+    if(length(force_mag) ~= length(force_pos)), error('# Of Forces has to equal # Of Positions!');end
+
+catch ME
+    disp(ME.message);
+    return;
+end
 
 % Supports
 support_type = [1, 2];          % 1=pin, 2=roller
 support_pos = [0, L];           % positions along beam
 
 
+%Matrix of Unknowns
 A = [1  0   0;       % sum Fx
      0  1   1;       % sum Fy
      0  0   L];      % sum moments about pin
@@ -27,7 +31,7 @@ b = [0;
      -sum(force_mag);
      -sum(force_mag .* force_pos)];
 
-x = A\b;
+x = A\b; % reads as solve Ax = b for x
 
 Px = x(1);
 Py = x(2);
