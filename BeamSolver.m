@@ -1,5 +1,8 @@
 %Simple Pin-Roller BeamSolver
 
+%Declerations
+dist_load = [];
+
 % Beam
 L = input('Enter Beam Length: ');                         % length
 
@@ -10,11 +13,34 @@ try
     str = input("Enter lever arm distance for Forces: ",'s');
     force_pos = sscanf(str, '%f');  % positions along beam 
 
-    if(length(force_mag) ~= length(force_pos)), error('# Of Forces has to equal # Of Positions!');end
+    % Four defining values per distributed load (w1 w2 start end)
+    % Start position
+    % End position
+    % Intensity at start (w1)
+    % Intensity at end (w2)
+    str = input("Enter Distributed Loads (w1 w2 start stop): ", 's');
+    [dist_loads_values , count] = sscanf(str, '%f'); %all distributed load values and how many items in the array
+
+    if(length(force_mag) ~= length(force_pos)), error("***# Of Forces has to equal # Of Positions!");end
+    if(mod(count,4) ~= 0), error("***Each Distributed load needs four defining values!");end
 
 catch ME
     disp(ME.message);
     return;
+end
+
+% Parse Distributed Loads and store them in a structure
+for i = 1:(count/4)
+    for j = 1
+    dist_load(i).w1 = dist_loads_values(j);
+    dist_load(i).w2 = dist_loads_values(j+1);
+    dist_load(i).start = dist_loads_values(j+2);
+    dist_load(i).stop = dist_loads_values(j+3);
+
+    dist_loads_values(1:4) = [];
+    
+    end
+
 end
 
 % Supports
