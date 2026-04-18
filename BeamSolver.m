@@ -18,7 +18,7 @@ try
     % End position
     % Intensity at start (w1)
     % Intensity at end (w2)
-    str = input("Enter Distributed Loads (w1 w2 start stop): ", 's');
+    str = input("Enter signed (+,-) Distributed Loads (w1 w2 start stop): ", 's');
     [dist_loads_values , count] = sscanf(str, '%f'); %all distributed load values and how many items in the array
 
     if(length(force_mag) ~= length(force_pos)), error("***# Of Forces has to equal # Of Positions!");end
@@ -30,17 +30,24 @@ catch ME
 end
 
 % Parse Distributed Loads and store them in a structure
-for i = 1:(count/4)
-    for j = 1
-    dist_load(i).w1 = dist_loads_values(j);
-    dist_load(i).w2 = dist_loads_values(j+1);
-    dist_load(i).start = dist_loads_values(j+2);
-    dist_load(i).stop = dist_loads_values(j+3);
-
-    dist_loads_values(1:4) = [];
-    
+if (count ~= 0)
+    for i = 1:(count/4)
+        idx = (i-1)*4 + 1; %logic to always loop in n (idx = (i-1)*n + 1)
+        dist_load(i).w1 = dist_loads_values(idx);
+        dist_load(i).w2 = dist_loads_values(idx+1);
+        dist_load(i).start = dist_loads_values(idx+2);
+        dist_load(i).stop = dist_loads_values(idx+3);
     end
+end
 
+% Solve distributed loads to turn them into equivalent force and position
+for i = 1:(length(dist_load))
+    F_eq = ((dist_load(i).w1 + dist_load(i).w2)/2) * (dist_load(i).stop - dist_load(i).start);
+    x_bar = ((dist_load(i).w1 + (2*dist_load(i).w2))/(3*(dist_load(i).w1 + dist_load(i).w2))) * (dist_load(i).stop - dist_load(i).start);
+    F_eq_pos = dist_load(i).start + x_bar;
+
+    force_mag = [force_mag F_eq];
+    force_pos = [force_pos F_eq_pos];
 end
 
 % Supports
