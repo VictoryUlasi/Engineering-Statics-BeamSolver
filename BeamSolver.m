@@ -4,14 +4,14 @@
 dist_load = [];
 
 % Beam
-L = input('Enter Beam Length: ');                         % length
+L = input('Enter Beam Length: ');% length
 
 % Loads
 try
     str = input("Enter Force values: ",'s');
-    force_mag = sscanf(str,'%f');   % magnitudes
+    force_mag = sscanf(str,'%f')';   % magnitudes, sscanf returns a column vector by default, transposing force_mag and force_pos when you read them in allows to concatenate horizontally
     str = input("Enter lever arm distance for Forces: ",'s');
-    force_pos = sscanf(str, '%f');  % positions along beam 
+    force_pos = sscanf(str, '%f')';  % positions along beam 
 
     % Four defining values per distributed load (w1 w2 start end)
     % Start position
@@ -41,10 +41,13 @@ if (count ~= 0)
 end
 
 % Solve distributed loads to turn them into equivalent force and position
+% using area of a trapezoid which can basically turn into area of a
+% rectangle and triangle depending on the intensities at the start and stop
+% positionsS
 for i = 1:(length(dist_load))
     F_eq = ((dist_load(i).w1 + dist_load(i).w2)/2) * (dist_load(i).stop - dist_load(i).start);
-    x_bar = ((dist_load(i).w1 + (2*dist_load(i).w2))/(3*(dist_load(i).w1 + dist_load(i).w2))) * (dist_load(i).stop - dist_load(i).start);
-    F_eq_pos = dist_load(i).start + x_bar;
+    x_bar = ((dist_load(i).w1 + (2*dist_load(i).w2))/(3*(dist_load(i).w1 + dist_load(i).w2))) * (dist_load(i).stop - dist_load(i).start); % x_bar = ((w1 + 2*w2) / (3*(w1 + w2))) * (stop - start) **Centroid Integral CH10 Statics
+    F_eq_pos = dist_load(i).start + x_bar; %converts from local coordinates (measured from load start) to global beam coordinates.
 
     force_mag = [force_mag F_eq];
     force_pos = [force_pos F_eq_pos];
