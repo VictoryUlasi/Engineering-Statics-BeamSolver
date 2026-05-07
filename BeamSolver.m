@@ -13,7 +13,7 @@ try
     str = input("Enter lever arm distance for Forces: ",'s');
     force_pos = sscanf(str, '%f')';  % positions along beam 
 
-    % Four defining values per distributed load (w1 w2 start end)
+    % Four defining values per distributed load (w1 w2 start stop)
     % Start position
     % End position
     % Intensity at start (w1)
@@ -40,10 +40,14 @@ if (count ~= 0)
     end
 end
 
+% Track number of real point loads before appending equivalent distributed loads
+% This prevents double counting in the shear loop
+n_point_loads = length(force_mag);
+
 % Solve distributed loads to turn them into equivalent force and position
 % using area of a trapezoid which can basically turn into area of a
 % rectangle and triangle depending on the intensities at the start and stop
-% positionsS
+% positions
 for i = 1:(length(dist_load))
     F_eq = ((dist_load(i).w1 + dist_load(i).w2)/2) * (dist_load(i).stop - dist_load(i).start);
     x_bar = ((dist_load(i).w1 + (2*dist_load(i).w2))/(3*(dist_load(i).w1 + dist_load(i).w2))) * (dist_load(i).stop - dist_load(i).start); % x_bar = ((w1 + 2*w2) / (3*(w1 + w2))) * (stop - start) **Centroid Integral CH10 Statics
@@ -79,21 +83,40 @@ shear_val = zeros(1,length(X));
 
 for i = 1:length(X)
     value = 0;
-    for j = 1:length(force_pos) %%Force shear value loop
+
+    for j = 1:n_point_loads % Point loads only, equivalent dist loads excluded to avoid double counting
         if (force_pos(j) <= X(i))
             value = value + force_mag(j);
         end
     end
+
     for k = 1:length(support_pos) %% Support shear value loop
-            if(support_pos(k) <= X(i))
-                switch support_type(k)
-                    case 1
-                        value = value + Py;
-                    case 2
-                        value = value + Ry;
-                end
+        if(support_pos(k) <= X(i))
+            switch support_type(k)
+                case 1
+                    value = value + Py;
+                case 2
+                    value = value + Ry;
             end
-     end
+        end
+    end
+
+    for m = 1:length(dist_load) % Distributed load continuous shear contribution
+        if (X(i) <= dist_load(m).start)
+            % Before load, contribute nothing
+            contribution = 0;
+        elseif (X(i) >= dist_load(m).stop)
+            % Past load, contribute full F_eq
+            contribution = ((dist_load(m).w1 + dist_load(m).w2)/2) * (dist_load(m).stop - dist_load(m).start);
+        else
+            % Inside load, partial trapezoid area from start to X(i)
+            d = X(i) - dist_load(m).start;
+            w_at_x = dist_load(m).w1 + ((dist_load(m).w2 - dist_load(m).w1) / (dist_load(m).stop - dist_load(m).start)) * d;
+            contribution = ((dist_load(m).w1 + w_at_x) / 2) * d;
+        end
+        value = value + contribution;
+    end
+
     shear_val(i) = value;
 end
 
@@ -140,7 +163,6 @@ f.NumberTitle = 'Off';
 %Plot 1 (Shear)
 subplot(2,1,1)
 plot(X,shear_val,'-r','LineWidth',3)
-
 title('Shear Value vs Length')
 xlabel('Length(m)')
 ylabel('Shear Value(N)')
@@ -151,7 +173,6 @@ set(gca,'FontSize',12,'FontName', 'Helvetica')
 %Plot 2 (Moment)
 subplot(2,1,2)
 plot(X,moment_val,'--b','LineWidth',3)
-
 title('Moment vs Length')
 xlabel('Length(m)')
 ylabel('Moment(Nm)')
