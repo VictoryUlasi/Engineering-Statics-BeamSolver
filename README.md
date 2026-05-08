@@ -9,6 +9,7 @@ A MATLAB-based structural beam solver for statically determinate pin-roller beam
 - Solves for support reactions (Px, Py, Ry) using matrix equilibrium equations
 - Supports multiple point loads at arbitrary positions
 - Supports multiple distributed loads (uniform, triangular, trapezoidal)
+- Continuous shear contribution from distributed loads (partial trapezoid area integration)
 - Generates shear force diagram
 - Generates bending moment diagram
 - Queries shear and moment values at any position along the beam
@@ -78,7 +79,18 @@ x_eq = start + ((w1 + 2*w2) / (3*(w1 + w2))) * (stop - start)
 
 ### Shear Diagram
 
-At each point along the beam, shear is computed as the sum of all forces (reactions and applied) to the left of that point.
+At each point along the beam, shear is computed as the sum of all forces to the left of that point. Point loads and reactions contribute as jumps. Distributed loads contribute continuously — at any position X inside a load, the partial area of the trapezoidal load from start to X is computed using linear interpolation of intensity:
+
+```
+w(x) = w1 + ((w2 - w1) / (stop - start)) * (x - start)
+contribution = ((w1 + w(x)) / 2) * (x - start)
+```
+
+Three cases are handled per distributed load at each position:
+
+- Before load → contribute nothing
+- Inside load → contribute partial trapezoid area
+- Past load → contribute full F_eq
 
 ### Moment Diagram
 
@@ -88,7 +100,7 @@ Bending moment is computed by numerically integrating the shear diagram using cu
 moment_val = cumsum(shear_val .* dX);
 ```
 
-This follows directly from the relationship dM/dx = V.
+This follows directly from the relationship dM/dx = V. The highest moment value indicates the most likely failure location, where bending stress σ = Mc/I is maximized.
 
 ---
 
@@ -105,18 +117,6 @@ This follows directly from the relationship dM/dx = V.
 ## Requirements
 
 - MATLAB R2019b or later (no additional toolboxes required)
-
----
-
-## Planned Extensions
-
-- [ ] Distributed load shear contribution (continuous, not equivalent point load)
-- [ ] User-defined support positions and types
-- [ ] Applied moment loads
-- [ ] Angled forces with horizontal components
-- [ ] Beam diagram panel showing load visualization
-- [ ] Max shear and moment output with locations
-- [ ] Fixed support (cantilever beam) support
 
 ---
 
